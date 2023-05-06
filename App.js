@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
+
 
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -15,12 +16,44 @@ export default function App() {
   }, []);
  
  // const handleBarCodeScanned = false;
-  const handleBarCodeScanned = async ({ type, data }) => {
-    setScanned(true);
-    const response = await fetch(`https://your-backend-server.com/validate-qr-code?data=${data}`);
-    const result = await response.json();
-    setResult(result);
+ const handleBarCodeScanned = async ({ type, data, bounds }) => {
+  const scanningFieldSize = 200; // Change this to your desired scanning field size
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+
+  const centerX = screenWidth / 2;
+  const centerY = screenHeight / 2;
+
+  const isQRCodeInScanningField =
+    bounds.origin.x >= centerX - scanningFieldSize / 2 &&
+    bounds.origin.x <= centerX + scanningFieldSize / 2 &&
+    bounds.origin.y >= centerY - scanningFieldSize / 2 &&
+    bounds.origin.y <= centerY + scanningFieldSize / 2;
+
+  if (!isQRCodeInScanningField) {
+    return;
+  }
+
+  setScanned(true);
+  const response = await fetch(`https://your-backend-server.com/validate-qr-code?data=${data}`);
+  const result = await response.json();
+
+  //testcode ab hier
+/*
+  const simulateSuccess = async () => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(true);
+      }, 500); // Simulate a delay of 1000ms
+    });
   };
+  
+  const result = await simulateSuccess();
+*/
+//testcode bis hier
+  setResult(result);
+};
+
 
   if (hasPermission === null) {
     return <Text>Requesting for camera permission</Text>;
@@ -30,31 +63,25 @@ export default function App() {
   }
 
   return (
-    
     <View style={styles.container}>
       <BarCodeScanner
         onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
       />
-      <View style={styles.scanFieldContainer}>
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-        style={StyleSheet.absoluteFillObject}/>
-    </View>
-
+  
       <View style={styles.overlay}>
         <View style={styles.transparentHole} />
       </View>
 
       <View style={styles.scanArea}>
-        <View style={[styles.scanCorner, styles.topLeftCorner]} />
-        <View style={[styles.scanCorner, styles.topRightCorner]} />
-        <View style={[styles.scanCorner, styles.bottomLeftCorner]} />
-        <View style={[styles.scanCorner, styles.bottomRightCorner]} />
+
       </View>
 
       {scanned && (
-        <TouchableOpacity style={styles.scanAgainButton} onPress={() => setScanned(false)}>
+        <TouchableOpacity style={styles.scanAgainButton} onPress={() => {
+          setScanned(false);
+          setResult(null); // Reset the result state to null
+      }}>
           <Image source={require('./assets/scan-again.png')} style={styles.scanAgainImage} />
         </TouchableOpacity>
       )}
@@ -72,30 +99,31 @@ const styles = StyleSheet.create({
   },
   scanAgainButton: {
     position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
+    bottom: 25,
+    left: '50%',
+    marginLeft: -55,
     alignItems: 'center',
   },
   scanAgainImage: {
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
   },
   greenHookImage: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+    top: 30,
+    left: '50%',
+    width: 110,
+    height: 110,
+    marginLeft: -55,
   },
   xSymbolImage: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+    top: 20,
+    left: '50%',
+    width: 140,
+    height: 140,
+    marginLeft: -70,
+
   },
   scanArea: {
     position: 'absolute',
@@ -106,53 +134,28 @@ const styles = StyleSheet.create({
     marginTop: -125,
     marginLeft: -125,
   },
-  scanCorner: {
+  overlay: {
     position: 'absolute',
-    borderColor: 'white',
-    borderWidth: 6,
+    top: '50%',
+    left: '50%',
+    width: 200,
+    height: 200,
+    marginTop: -100,
+    marginLeft: -100,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
-  topLeftCorner: {
-    borderTopLeftRadius: 5,
-    left: 0,
-    top: 0,
-  },
-  topRightCorner: {
-    borderTopRightRadius: 5,
-    right: 0,
-    top: 0,
-  },
-  bottomLeftCorner: {
-    borderBottomLeftRadius: 5,
-    left: 0,
-    bottom: 0,
-  },
-  bottomRightCorner: {
-    borderBottomRightRadius: 5,
-    right: 0,
-    bottom: 0,
-  },
- 
   transparentHole: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    width: 250,
-    height: 250,
-    marginTop: -125,
-    marginLeft: -125,
+    width: 200, // Change the width here
+    height: 200, // Change the height here
+    marginTop: -100, // Adjust the margin to half of the height
+    marginLeft: -100, // Adjust the margin to half of the width
     backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    borderWidth: 125,
+    borderColor: 'red',
+    borderWidth: 5,
   },
-  scanFieldContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 250, // Change the width here
-    height: 250, // Change the height here
-    marginTop: -125, // Adjust the margin to half of the height
-    marginLeft: -125, // Adjust the margin to half of the width
-    overflow: 'hidden', // This will crop the scanner view
-  },
+  
   
 });
